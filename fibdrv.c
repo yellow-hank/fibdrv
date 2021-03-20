@@ -24,19 +24,38 @@ static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 
-static long long fib_sequence(long long k)
+typedef struct Big_number {
+    unsigned long long lower, upper;
+} Big_number;
+
+static Big_number bigN_add(Big_number augend, Big_number addend)
+{
+    Big_number result;
+    result.upper = augend.upper + addend.upper;
+    if (augend.lower > ~addend.lower)
+        result.upper++;
+    result.lower = augend.lower + addend.lower;
+
+    return result;
+}
+
+static Big_number fib_sequence(long long k)
 {
     /* FIXME: use clz/ctz and fast algorithms to speed up */
-    long long f[k + 2];
+    Big_number f[3];
 
-    f[0] = 0;
-    f[1] = 1;
+    f[0].lower = 0;
+    f[0].upper = 0;
+    f[1].lower = 1;
+    f[1].upper = 0;
 
     for (int i = 2; i <= k; i++) {
-        f[i] = f[i - 1] + f[i - 2];
+        f[2] = bigN_add(f[0], f[1]);
+        f[0] = f[1];
+        f[1] = f[2];
     }
 
-    return f[k];
+    return f[2];
 }
 
 static int fib_open(struct inode *inode, struct file *file)
