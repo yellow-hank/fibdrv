@@ -6,6 +6,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/uaccess.h>
 
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
@@ -17,7 +18,7 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 92
+#define MAX_LENGTH 100
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
@@ -32,9 +33,18 @@ static Big_number bigN_add(Big_number augend, Big_number addend)
 {
     Big_number result;
     result.upper = augend.upper + addend.upper;
-    if (augend.lower > ~addend.lower)
+    if (augend.lower > ~addend.lower) {
         result.upper++;
-    result.lower = augend.lower + addend.lower;
+        result.lower = augend.lower + addend.lower;
+    } else {
+        if (augend.lower + addend.lower > 9999999999999999999U) {
+            result.upper++;
+            result.lower = augend.lower + addend.lower - 10000000000000000000U;
+        } else {
+            result.lower = augend.lower + addend.lower;
+        }
+    }
+
 
     return result;
 }
@@ -48,6 +58,12 @@ static Big_number fib_sequence(long long k)
     f[0].upper = 0;
     f[1].lower = 1;
     f[1].upper = 0;
+
+    if (k == 0)
+        return f[0];
+
+    if (k == 1)
+        return f[1];
 
     for (int i = 2; i <= k; i++) {
         f[2] = bigN_add(f[0], f[1]);
@@ -79,7 +95,21 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    return (ssize_t) fib_sequence(*offset);
+    Big_number result;
+
+    result = fib_sequence(*offset);
+    int ret = 0;
+    char result_buf[40];
+
+    if (result.upper > 0) {
+        snprintf(result_buf, 40, "%llu%19llu", result.upper, result.lower);
+    } else {
+        snprintf(result_buf, 40, "%llu", result.lower);
+    }
+
+    ret = copy_to_user(buf, result_buf, 40);
+
+    return ret;
 }
 
 /* write operation is skipped */
