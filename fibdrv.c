@@ -35,7 +35,7 @@ static Big_number bigN_add(Big_number augend, Big_number addend)
     result.upper = augend.upper + addend.upper;
     if (augend.lower > ~addend.lower) {
         result.upper++;
-        result.lower = augend.lower + addend.lower;
+        result.lower = augend.lower + addend.lower + 8446744073709551616U;
     } else {
         if (augend.lower + addend.lower > 9999999999999999999U) {
             result.upper++;
@@ -102,7 +102,7 @@ static ssize_t fib_read(struct file *file,
     char result_buf[40];
 
     if (result.upper > 0) {
-        snprintf(result_buf, 40, "%llu%19llu", result.upper, result.lower);
+        snprintf(result_buf, 40, "%llu%019llu", result.upper, result.lower);
     } else {
         snprintf(result_buf, 40, "%llu", result.lower);
     }
