@@ -24,6 +24,8 @@ load:
 unload:
 	sudo rmmod $(TARGET_MODULE) || true >/dev/null
 
+client_measure: client_measure.c
+	$(CC) -o $@ $^
 client: client.c
 	$(CC) -o $@ $^
 

@@ -6,7 +6,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
-#include <linux/uaccess.h>
+#include <linux/uaccess.h>  //for copy_to_user
 
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
@@ -118,7 +118,13 @@ static ssize_t fib_write(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    return 1;
+    ktime_t ktime;
+    ktime = ktime_get();
+    fib_sequence(*offset);
+    ktime = ktime_sub(ktime_get(), ktime);
+
+
+    return (ssize_t) ktime_to_ns(ktime);
 }
 
 static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
