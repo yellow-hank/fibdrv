@@ -12,8 +12,9 @@ make
 make client_measure
 make unload
 make load
-sudo taskset -c 11 ./client_measure > measure_time_list
-gnuplot scripts/plot_time.gp
+python3 statistic.py
+# sudo taskset -c 11 ./client_measure > measure_time_list.txt
+# gnuplot scripts/plot_time.gp
 make unload
 
 # restore the original system settings
