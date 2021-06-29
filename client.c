@@ -1,4 +1,6 @@
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,14 +10,35 @@
 
 #define FIB_DEV "/dev/fibonacci"
 
+#define P10_UINT64 10000000000000000000ULL /* 19 zeroes */
+#define E10_UINT64 19
+
+#define STRINGIZER(x) #x
+#define TO_STRING(x) STRINGIZER(x)
+
+static int print_u128_u(__uint128_t u128)
+{
+    int rc;
+    if (u128 > UINT64_MAX) {
+        __uint128_t leading = u128 / P10_UINT64;
+        uint64_t trailing = u128 % P10_UINT64;
+        rc = print_u128_u(leading);
+        rc += printf("%." TO_STRING(E10_UINT64) PRIu64, trailing);
+    } else {
+        uint64_t u64 = u128;
+        rc = printf("%" PRIu64, u64);
+    }
+    return rc;
+}
+
 
 
 int main()
 {
     long long sz;
 
+    unsigned __int128 result;
 
-    char buf[40];
     char write_buf[] = "testing writing";
     int offset = 184; /* TODO: try test something bigger than the limit */
 
@@ -32,20 +55,20 @@ int main()
 
     for (int i = 0; i <= offset; i++) {
         lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 40);
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%s.\n",
-               i, buf);
+        sz = read(fd, &result, sizeof(result));
+        printf("Reading from " FIB_DEV " at offset %d, returned the sequence ",
+               i);
+        print_u128_u(result);
+        printf(".\n");
     }
 
     for (int i = offset; i >= 0; i--) {
         lseek(fd, i, SEEK_SET);
-        sz = read(fd, buf, 1);
-        printf("Reading from " FIB_DEV
-               " at offset %d, returned the sequence "
-               "%s.\n",
-               i, buf);
+        sz = read(fd, &result, sizeof(result));
+        printf("Reading from " FIB_DEV " at offset %d, returned the sequence ",
+               i);
+        print_u128_u(result);
+        printf(".\n");
     }
 
     close(fd);

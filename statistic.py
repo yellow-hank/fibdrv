@@ -31,7 +31,7 @@ if __name__ == "__main__":
     Y = data_processing(Ys, runs)
 
     fig, ax = plt.subplots(1, 1, sharey = True)
-    ax.set_title('Fibonacci driver time measure (iterative)', fontsize = 16)
+    ax.set_title('Fibonacci driver time measure (fast_doubling)', fontsize = 16)
     ax.set_xlabel(r'$n_{th}$ fibonacci', fontsize = 16)
     ax.set_ylabel('time (ns)', fontsize = 16)
 

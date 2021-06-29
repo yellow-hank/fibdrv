@@ -25,54 +25,26 @@ static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 
-typedef struct Big_number {
-    unsigned long long lower, upper;
-} Big_number;
 
-static Big_number bigN_add(Big_number augend, Big_number addend)
+unsigned __int128 fib_sequence_fast_db(int k)
 {
-    Big_number result;
-    result.upper = augend.upper + addend.upper;
-    if (augend.lower > ~addend.lower) {
-        result.upper++;
-        result.lower = augend.lower + addend.lower + 8446744073709551616U;
-    } else {
-        if (augend.lower + addend.lower > 9999999999999999999U) {
-            result.upper++;
-            result.lower = augend.lower + addend.lower - 10000000000000000000U;
-        } else {
-            result.lower = augend.lower + addend.lower;
+    unsigned __int128 a = 0, b = 1;
+    for (int i = 31U - (unsigned) __builtin_clz(k); i >= 0; i--) {
+        unsigned __int128 t1 = a * (2 * b - a);
+        unsigned __int128 t2 = b * b + a * a;
+        a = t1;
+        b = t2;
+        if (k & 1 << i) {
+            t1 = a + b;
+            a = b;
+            b = t1;
         }
     }
 
-
-    return result;
+    return a;
 }
 
-static Big_number fib_sequence(long long k)
-{
-    /* FIXME: use clz/ctz and fast algorithms to speed up */
-    Big_number f[3];
 
-    f[0].lower = 0;
-    f[0].upper = 0;
-    f[1].lower = 1;
-    f[1].upper = 0;
-
-    if (k == 0)
-        return f[0];
-
-    if (k == 1)
-        return f[1];
-
-    for (int i = 2; i <= k; i++) {
-        f[2] = bigN_add(f[0], f[1]);
-        f[0] = f[1];
-        f[1] = f[2];
-    }
-
-    return f[2];
-}
 
 static int fib_open(struct inode *inode, struct file *file)
 {
@@ -95,19 +67,13 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    Big_number result;
-
-    result = fib_sequence(*offset);
+    unsigned __int128 result;
+    result = fib_sequence_fast_db(*offset);
     int ret = 0;
-    char result_buf[40];
 
-    if (result.upper > 0) {
-        snprintf(result_buf, 40, "%llu%019llu", result.upper, result.lower);
-    } else {
-        snprintf(result_buf, 40, "%llu", result.lower);
-    }
 
-    ret = copy_to_user(buf, result_buf, 40);
+    ret = copy_to_user(buf, &result, sizeof(result));
+
 
     return ret;
 }
@@ -120,7 +86,7 @@ static ssize_t fib_write(struct file *file,
 {
     ktime_t ktime;
     ktime = ktime_get();
-    fib_sequence(*offset);
+    fib_sequence_fast_db(*offset);
     ktime = ktime_sub(ktime_get(), ktime);
 
 
